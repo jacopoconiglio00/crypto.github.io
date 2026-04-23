@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CRYPTEX — Live Markets</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #080a0f;
+    --bg2: #0d1018;
+    --bg3: #12151e;
+    --border: rgba(255,255,255,0.06);
+    --border-hover: rgba(255,255,255,0.14);
+    --accent: #c8f135;
+    --accent2: #00e5ff;
+    --red: #ff3d5a;
+    --green: #00e699;
+    --text: #f0f2f7;
+    --muted: #5a6070;
+    --muted2: #8a93a8;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Outfit', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* NOISE TEXTURE */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.4;
+  }
+
+  /* GRID LINES BG */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+    background-size: 60px 60px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrapper {
+    position: relative;
+    z-index: 1;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  /* ───── HEADER ───── */
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(8,10,15,0.85);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 32px;
+    letter-spacing: 3px;
+    color: var(--text);
+    text-decoration: none;
+  }
+
+  .logo em {
+    color: var(--accent);
+    font-style: normal;
+  }
+
+  .header-meta {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .live-dot {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted2);
+    letter-spacing: 0.5px;
+  }
+
+  .live-dot::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.8); }
+  }
+
+  .refresh-btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 8px 16px;
+    border: 1px solid var(--border-hover);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--muted2);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .refresh-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* ───── HERO ───── */
+  .hero {
+    padding: 64px 0 48px;
+    position: relative;
+  }
+
+  .hero-tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .hero-tag::before {
+    content: '';
+    width: 30px;
+    height: 1px;
+    background: var(--accent);
+  }
+
+  .hero-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(52px, 8vw, 96px);
+    line-height: 0.95;
+    letter-spacing: 2px;
+    margin-bottom: 24px;
+  }
+
+  .hero-title .outline {
+    -webkit-text-stroke: 1px rgba(255,255,255,0.2);
+    color: transparent;
+  }
+
+  .hero-title .glow {
+    color: var(--accent);
+    text-shadow: 0 0 60px rgba(200,241,53,0.3);
+  }
+
+  .hero-sub {
+    font-size: 15px;
+    color: var(--muted2);
+    max-width: 480px;
+    line-height: 1.7;
+    font-weight: 300;
+  }
+
+  /* ───── TICKER STRIP ───── */
+  .ticker-wrap {
+    overflow: hidden;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    background: var(--bg2);
+    padding: 10px 0;
+    margin-bottom: 40px;
+  }
+
+  .ticker-track {
+    display: flex;
+    gap: 0;
+    white-space: nowrap;
+    animation: ticker 30s linear infinite;
+  }
+
+  @keyframes ticker {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+
+  .ticker-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 28px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    border-right: 1px solid var(--border);
+  }
+
+  .ticker-sym { color: var(--muted2); }
+  .ticker-price { color: var(--text); font-weight: 500; }
+  .ticker-chg.pos { color: var(--green); }
+  .ticker-chg.neg { color: var(--red); }
+
+  /* ───── SEARCH & SORT ───── */
+  .controls {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .search-wrap {
+    flex: 1;
+    min-width: 200px;
+    position: relative;
+  }
+
+  .search-wrap svg {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: 0.3;
+  }
+
+  .search-input {
+    width: 100%;
+    padding: 12px 14px 12px 40px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'Outfit', sans-serif;
+    font-size: 14px;
+    transition: border-color 0.2s;
+    outline: none;
+  }
+
+  .search-input:focus { border-color: var(--accent); }
+  .search-input::placeholder { color: var(--muted); }
+
+  .sort-pills {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .pill {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    padding: 9px 16px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--muted2);
+    cursor: pointer;
+    transition: all 0.15s;
+    text-transform: uppercase;
+  }
+
+  .pill:hover { border-color: var(--border-hover); color: var(--text); }
+
+  .pill.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #080a0f;
+    font-weight: 500;
+  }
+
+  /* ───── GRID ───── */
+  .coin-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 40px;
+  }
+
+  .coin-card {
+    background: var(--bg);
+    padding: 20px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: background 0.2s;
+    animation: fadeIn 0.4s ease both;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .coin-card::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--accent);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.25s ease;
+  }
+
+  .coin-card:hover { background: var(--bg3); }
+  .coin-card:hover::after { transform: scaleX(1); }
+
+  .coin-card.selected {
+    background: var(--bg2);
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+  }
+
+  .card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  .coin-info { display: flex; align-items: center; gap: 10px; }
+
+  .coin-img {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  .coin-name-wrap {}
+  .coin-name { font-size: 15px; font-weight: 600; }
+  .coin-sym {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .rank-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 2px 7px;
+  }
+
+  .coin-price {
+    font-family: 'DM Mono', monospace;
+    font-size: 22px;
+    font-weight: 500;
+    letter-spacing: -0.5px;
+    margin-bottom: 4px;
+  }
+
+  .coin-change {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 3px 10px;
+    border-radius: 3px;
+    margin-bottom: 12px;
+  }
+
+  .coin-change.pos { background: rgba(0,230,153,0.1); color: var(--green); }
+  .coin-change.neg { background: rgba(255,61,90,0.1); color: var(--red); }
+
+  .coin-mcap {
+    font-size: 12px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* Sparkline mini-chart */
+  .sparkline {
+    width: 100%;
+    height: 36px;
+    margin-top: 12px;
+  }
+
+  /* ───── DETAIL PANEL ───── */
+  .detail-panel {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 40px;
+    animation: slideDown 0.3s ease;
+    display: none;
+  }
+
+  .detail-panel.open { display: block; }
+
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .detail-hero {
+    background: var(--bg2);
+    padding: 28px 28px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+
+  .detail-img { width: 56px; height: 56px; border-radius: 50%; }
+
+  .detail-name-block { flex: 1; min-width: 200px; }
+
+  .detail-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 42px;
+    letter-spacing: 2px;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+
+  .detail-symbol {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--muted2);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .detail-price-block { text-align: right; }
+
+  .detail-price {
+    font-family: 'DM Mono', monospace;
+    font-size: 36px;
+    font-weight: 500;
+    letter-spacing: -1px;
+    color: var(--accent);
+  }
+
+  .detail-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 1px;
+    background: var(--border);
+  }
+
+  .stat-cell {
+    background: var(--bg);
+    padding: 16px 20px;
+  }
+
+  .stat-lbl {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+
+  .stat-val {
+    font-family: 'DM Mono', monospace;
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .detail-close {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--muted2);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    padding: 8px 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-left: auto;
+    align-self: flex-start;
+  }
+
+  .detail-close:hover { border-color: var(--red); color: var(--red); }
+
+  /* ───── FOOTER ───── */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 20px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* ───── LOADING / ERROR ───── */
+  .state-box {
+    grid-column: 1 / -1;
+    padding: 48px;
+    text-align: center;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--muted2);
+    letter-spacing: 1px;
+  }
+
+  .spinner {
+    width: 28px;
+    height: 28px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 16px;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .error-txt { color: var(--red); }
+
+  @media (max-width: 600px) {
+    .hero-title { font-size: 52px; }
+    .detail-price { font-size: 24px; }
+    .detail-name { font-size: 32px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <a class="logo" href="#">CRYPT<em>EX</em></a>
+    <div class="header-meta">
+      <span class="live-dot" id="update-time">LIVE</span>
+      <button class="refresh-btn" onclick="loadData()">↻ AGGIORNA</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrapper">
+
+  <section class="hero">
+    <div class="hero-tag">Mercati in tempo reale</div>
+    <h1 class="hero-title">
+      <span class="outline">CRYPTO</span><br/>
+      <span class="glow">MARKETS</span>
+    </h1>
+    <p class="hero-sub">Prezzi live, variazioni e statistiche per le principali criptovalute. Dati aggiornati ogni 60 secondi tramite CoinGecko.</p>
+  </section>
+
+</div>
+
+<div class="ticker-wrap">
+  <div class="ticker-track" id="ticker-track">
+    <span class="ticker-item"><span class="ticker-sym">CARICAMENTO</span><span class="ticker-price">—</span></span>
+  </div>
+</div>
+
+<div class="wrapper">
+
+  <div class="controls">
+    <div class="search-wrap">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input class="search-input" type="text" id="search" placeholder="Cerca Bitcoin, ETH, Solana..." oninput="render()" />
+    </div>
+    <div class="sort-pills">
+      <button class="pill active" data-sort="market_cap_rank" onclick="setSort('market_cap_rank',1,this)">Rank</button>
+      <button class="pill" data-sort="current_price" onclick="setSort('current_price',-1,this)">Prezzo</button>
+      <button class="pill" data-sort="price_change_percentage_24h" onclick="setSort('price_change_percentage_24h',-1,this)">24h %</button>
+      <button class="pill" data-sort="market_cap" onclick="setSort('market_cap',-1,this)">Market Cap</button>
+    </div>
+  </div>
+
+  <div class="detail-panel" id="detail-panel"></div>
+
+  <div class="coin-grid" id="coin-grid">
+    <div class="state-box"><div class="spinner"></div>CARICAMENTO MERCATI...</div>
+  </div>
+
+  <footer>
+    <span>CRYPTEX &copy; 2025 — POWERED BY COINGECKO API</span>
+    <span id="footer-time">—</span>
+  </footer>
+
+</div>
+
+<script>
+let coins = [];
+let sortField = 'market_cap_rank';
+let sortDir = 1;
+let selectedId = null;
+
+function fmtP(n) {
+  if (n == null) return '—';
+  if (n < 0.001) return '$' + n.toFixed(6);
+  if (n < 1) return '$' + n.toFixed(4);
+  return '$' + n.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+}
+
+function fmtM(n) {
+  if (n == null) return '—';
+  if (n >= 1e12) return '$' + (n/1e12).toFixed(2) + 'T';
+  if (n >= 1e9) return '$' + (n/1e9).toFixed(2) + 'B';
+  if (n >= 1e6) return '$' + (n/1e6).toFixed(2) + 'M';
+  return '$' + n.toLocaleString();
+}
+
+function fmtC(n) {
+  if (n == null) return '—';
+  const s = n >= 0 ? '+' : '';
+  return s + n.toFixed(2) + '%';
+}
+
+function setSort(f, d, el) {
+  if (sortField === f) { sortDir *= -1; }
+  else { sortField = f; sortDir = d; }
+  document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  render();
+}
+
+function buildTicker(list) {
+  const items = list.slice(0, 16).map(c => {
+    const chg = c.price_change_percentage_24h;
+    const cls = chg >= 0 ? 'pos' : 'neg';
+    const sign = chg >= 0 ? '▲' : '▼';
+    return `<span class="ticker-item">
+      <span class="ticker-sym">${c.symbol.toUpperCase()}</span>
+      <span class="ticker-price">${fmtP(c.current_price)}</span>
+      <span class="ticker-chg ${cls}">${sign} ${Math.abs(chg||0).toFixed(2)}%</span>
+    </span>`;
+  }).join('');
+  const track = document.getElementById('ticker-track');
+  track.innerHTML = items + items;
+}
+
+function miniSparkline(chg) {
+  const c = chg >= 0 ? '#00e699' : '#ff3d5a';
+  const pts = Array.from({length: 12}, (_,i) => {
+    const noise = (Math.random() - 0.5) * 12;
+    const trend = chg >= 0 ? i * 1.5 : -i * 1.5;
+    return 30 - (trend + noise) * 0.4;
+  });
+  const w = 260, h = 36;
+  const min = Math.min(...pts), max = Math.max(...pts);
+  const norm = pts.map(p => h - ((p - min) / (max - min + 0.001)) * h);
+  const xs = pts.map((_, i) => (i / (pts.length - 1)) * w);
+  const path = norm.map((y, i) => `${i === 0 ? 'M' : 'L'}${xs[i].toFixed(1)},${y.toFixed(1)}`).join(' ');
+  return `<svg class="sparkline" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+    <defs>
+      <linearGradient id="sg${Math.random().toString(36).slice(2)}" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="${c}" stop-opacity="0.3"/>
+        <stop offset="100%" stop-color="${c}" stop-opacity="1"/>
+      </linearGradient>
+    </defs>
+    <path d="${path}" fill="none" stroke="${c}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`;
+}
+
+function render() {
+  const q = document.getElementById('search').value.toLowerCase();
+  let list = coins.filter(c =>
+    c.name.toLowerCase().includes(q) || c.symbol.toLowerCase().includes(q)
+  );
+
+  list.sort((a, b) => {
+    let va = a[sortField] ?? (sortDir === 1 ? Infinity : -Infinity);
+    let vb = b[sortField] ?? (sortDir === 1 ? Infinity : -Infinity);
+    return sortDir * (va < vb ? -1 : va > vb ? 1 : 0);
+  });
+
+  const grid = document.getElementById('coin-grid');
+  if (!list.length) {
+    grid.innerHTML = '<div class="state-box">Nessuna crypto trovata.</div>';
+    return;
+  }
+
+  grid.innerHTML = list.map((c, i) => {
+    const chg = c.price_change_percentage_24h || 0;
+    const cls = chg >= 0 ? 'pos' : 'neg';
+    const arrow = chg >= 0 ? '▲' : '▼';
+    const sel = c.id === selectedId ? ' selected' : '';
+    return `<div class="coin-card${sel}" onclick="showDetail('${c.id}')" style="animation-delay:${i*0.03}s">
+      <div class="card-top">
+        <div class="coin-info">
+          <img class="coin-img" src="${c.image}" alt="${c.name}" onerror="this.style.opacity='0'" loading="lazy"/>
+          <div class="coin-name-wrap">
+            <div class="coin-name">${c.name}</div>
+            <div class="coin-sym">${c.symbol}</div>
+          </div>
+        </div>
+        <span class="rank-badge">#${c.market_cap_rank}</span>
+      </div>
+      <div class="coin-price">${fmtP(c.current_price)}</div>
+      <div class="coin-change ${cls}">${arrow} ${fmtC(chg)}</div>
+      <div class="coin-mcap">MCap: ${fmtM(c.market_cap)}</div>
+      ${miniSparkline(chg)}
+    </div>`;
+  }).join('');
+}
+
+function showDetail(id) {
+  if (selectedId === id) {
+    selectedId = null;
+    document.getElementById('detail-panel').className = 'detail-panel';
+    render();
+    return;
+  }
+  selectedId = id;
+  const c = coins.find(x => x.id === id);
+  if (!c) return;
+  const chg = c.price_change_percentage_24h || 0;
+  const cls = chg >= 0 ? 'pos' : 'neg';
+  const panel = document.getElementById('detail-panel');
+  panel.className = 'detail-panel open';
+  panel.innerHTML = `
+    <div class="detail-hero">
+      <img class="detail-img" src="${c.image}" alt="${c.name}"/>
+      <div class="detail-name-block">
+        <div class="detail-name">${c.name}</div>
+        <div class="detail-symbol">${c.symbol.toUpperCase()} · RANK #${c.market_cap_rank}</div>
+      </div>
+      <div class="detail-price-block">
+        <div class="detail-price">${fmtP(c.current_price)}</div>
+        <div class="coin-change ${cls}" style="justify-content:flex-end;margin-top:6px;">${chg >= 0 ? '▲' : '▼'} ${fmtC(chg)} (24h)</div>
+      </div>
+      <button class="detail-close" onclick="selectedId=null;document.getElementById('detail-panel').className='detail-panel';render()">✕ CHIUDI</button>
+    </div>
+    <div class="detail-stats">
+      <div class="stat-cell"><div class="stat-lbl">Market Cap</div><div class="stat-val">${fmtM(c.market_cap)}</div></div>
+      <div class="stat-cell"><div class="stat-lbl">Volume 24h</div><div class="stat-val">${fmtM(c.total_volume)}</div></div>
+      <div class="stat-cell"><div class="stat-lbl">Max 24h</div><div class="stat-val">${fmtP(c.high_24h)}</div></div>
+      <div class="stat-cell"><div class="stat-lbl">Min 24h</div><div class="stat-val">${fmtP(c.low_24h)}</div></div>
+      <div class="stat-cell"><div class="stat-lbl">ATH</div><div class="stat-val">${fmtP(c.ath)}</div></div>
+      <div class="stat-cell"><div class="stat-lbl">Da ATH</div><div class="stat-val" style="color:${(c.ath_change_percentage||0)<0?'var(--red)':'var(--green)'}">${fmtC(c.ath_change_percentage)}</div></div>
+      <div class="stat-cell"><div class="stat-lbl">Supply circolante</div><div class="stat-val">${c.circulating_supply ? (c.circulating_supply/1e6).toFixed(2)+'M' : '—'}</div></div>
+      <div class="stat-cell"><div class="stat-lbl">Supply totale</div><div class="stat-val">${c.total_supply ? (c.total_supply/1e6).toFixed(2)+'M' : '∞'}</div></div>
+    </div>`;
+  panel.scrollIntoView({behavior:'smooth', block:'nearest'});
+  render();
+}
+
+async function loadData() {
+  try {
+    const res = await fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=40&page=1&sparkline=false&price_change_percentage=24h');
+    if (!res.ok) throw new Error();
+    coins = await res.json();
+    const now = new Date();
+    const t = now.toLocaleTimeString('it-IT', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+    document.getElementById('update-time').textContent = 'LIVE · ' + t;
+    document.getElementById('footer-time').textContent = 'ULTIMO AGGIORNAMENTO: ' + t;
+    buildTicker(coins);
+    render();
+  } catch {
+    const grid = document.getElementById('coin-grid');
+    grid.innerHTML = `<div class="state-box error-txt">⚠ ERRORE DI CONNESSIONE<br/><span style="color:var(--muted);font-size:11px;margin-top:8px;display:block">L'API CoinGecko ha limiti per richieste frequenti. Riprova tra qualche secondo.</span></div>`;
+  }
+}
+
+loadData();
+setInterval(loadData, 60000);
+</script>
+</body>
+</html>
